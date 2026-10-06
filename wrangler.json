@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "my-lab-project",
+  "main": "src/index.ts",
+  "compatibility_date": "2024-09-23",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "my-db",
+      "database_id": "local-db-id"
+    }
+  ]
+}

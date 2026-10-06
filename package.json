@@ -1,0 +1,15 @@
+{
+  "name": "my-lab-project",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "wrangler dev",
+    "start": "wrangler dev"
+  },
+  "dependencies": {
+    "hono": "^4.13.13"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240923.0",
+    "wrangler": "^3.0.0"
+  }
+}
