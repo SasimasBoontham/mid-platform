@@ -35,4 +35,12 @@
   //   "enabled": true,
   //   "head_sampling_rate": 1
   // }
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "my-lab-db",
+      "database_id": "57494d84-b7c2-4546-977e-9f62e935b0c2"
+    }
+  ]
 }
