@@ -1,13 +1,18 @@
 # Quality Gate Review
 
-1. **Finding 1 (Reliability/Accuracy):** SQL string concatenation posed SQL injection risks.
-   - **Fix:** Refactored SQL queries to use parameter binding (`.bind()`).
-   - **Evidence:** Verified all SQL statements use `?` syntax with bindings.
+## Findings & Fixes
 
-2. **Finding 2 (Reliability/Accuracy):** Missing validation for invalid time ranges (`startAt >= endAt`).
-   - **Fix:** Added Epoch timestamp comparisons in `POST` and `PATCH` handlers returning `400 Bad Request`.
-   - **Evidence:** Tested with `curl` case 5, correctly returning HTTP 400.
+### 1. Reliability/Accuracy: Missing Input Date Validation
+- **Finding:** The initial logic did not validate if `startAt` was earlier than `endAt`.
+- **Fix:** Added validation `if (new Date(startAt) >= new Date(endAt))` returning a `400 Bad Request` with `{ "error": "startAt must be before endAt" }`.
+- **Evidence:** Tested with cURL passing invalid date ranges; system correctly returned HTTP status 400.
 
-3. **Finding 3 (Reasoning/You Own It):** Time overlap check didn't filter out current booking ID during `PATCH` operations.
-   - **Fix:** Added `AND id != ?` to the overlap check SQL query for update routes.
-   - **Evidence:** Updating non-time fields on existing bookings no longer triggers self-conflict 409 errors.
+### 2. Security: Parameter Binding Enforcement
+- **Finding:** Checked codebase for string concatenation in SQL queries.
+- **Fix:** Refactored all database calls to use parameter binding (`db.prepare(...).bind(...)`).
+- **Evidence:** Verified all SQL parameters are bound safely without dynamic string interpolation.
+
+### 3. Reasoning / You Own It: Overlap Exclusion on Update
+- **Finding:** During `PATCH /bookings/:id`, checking overlap without excluding the current booking ID caused self-conflict (409).
+- **Fix:** Updated the overlap query for PATCH to include `AND id != ?`.
+- **Evidence:** Updating non-time fields (e.g. borrowerName) for an existing booking now succeeds with HTTP 200.
