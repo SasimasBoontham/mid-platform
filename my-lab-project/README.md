@@ -1,12 +1,20 @@
-# Campus Equipment Booking API
+Campus Equipment Booking API
 
-## Base URL
-`http://127.0.0.1:8787`
+RESTful API สำหรับระบบจองอุปกรณ์ภายในวิทยาเขต พัฒนาด้วย Hono และนำขึ้นระบบด้วย Cloudflare Workers พร้อมระบบตรวจสอบเวลาจองทับซ้อน (Overlap Validation)
 
-## How to Run
-1. Install dependencies: `npm install`
-2. Run local server: `npx wrangler dev --local --ip 127.0.0.1 --port 8787`
+🌐 Base API URLs
 
-## ERD / Schema Overview
-- **equipment**: `id` (TEXT, PK), `name` (TEXT), `location` (TEXT)
-- **bookings**: `id` (TEXT, PK), `equipmentId` (TEXT, FK), `borrowerName` (TEXT), `startAt` (TEXT), `endAt` (TEXT), `purpose` (TEXT)
+Local Development: http://localhost:8787/api
+Production (Cloudflare Workers): https://midterm-api.6731503122-scholarship.workers.dev/api
+📌 Endpoints Overview
+
+Method	Endpoint	Description	Status Codes
+GET	/api/equipment	ดึงรายการอุปกรณ์ทั้งหมด	200 OK
+GET	/api/bookings	ดึงรายการจองทั้งหมด	200 OK
+POST	/api/bookings	สร้างรายการจองใหม่ (เช็คเวลาทับซ้อน)	201 Created, 400 Bad Request, 409 Conflict
+PATCH	/api/bookings/:id	อัปเดตสถานะการจอง	200 OK, 400 Bad Request, 404 Not Found
+DELETE	/api/bookings/:id	ยกเลิกรายการจอง	200 OK, 404 Not Found
+🚀 How to Run Locally
+
+ติดตั้ง Dependencies:
+npm install

@@ -1,15 +1,15 @@
 {
-  "name": "my-lab-project",
-  "version": "1.0.0",
+  "name": "midterm-api",
+  "type": "module",
   "scripts": {
     "dev": "wrangler dev",
-    "start": "wrangler dev"
+    "deploy": "wrangler deploy --minify",
+    "cf-typegen": "wrangler types --env-interface CloudflareBindings"
   },
   "dependencies": {
     "hono": "^4.13.13"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20240923.0",
-    "wrangler": "^3.0.0"
+    "wrangler": "^4.110.0"
   }
 }

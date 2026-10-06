@@ -1,18 +1,17 @@
-# Quality Gate Review
+Quality Gate Review
 
-## Findings & Fixes
+Finding 1 (Reliability/Accuracy)
 
-### 1. Reliability/Accuracy: Missing Input Date Validation
-- **Finding:** The initial logic did not validate if `startAt` was earlier than `endAt`.
-- **Fix:** Added validation `if (new Date(startAt) >= new Date(endAt))` returning a `400 Bad Request` with `{ "error": "startAt must be before endAt" }`.
-- **Evidence:** Tested with cURL passing invalid date ranges; system correctly returned HTTP status 400.
+What was found: Initial code did not reject bookings where startAt was equal to or after endAt.
+How it was fixed: Added a validation check new Date(startAt).getTime() >= new Date(endAt).getTime() returning 400 Bad Request.
+Evidence: Tested with POST request with startAt after endAt, received status 400 with { "error": "startAt must be before endAt" }.
+Finding 2 (Reliability/Accuracy - Overlap Logic)
 
-### 2. Security: Parameter Binding Enforcement
-- **Finding:** Checked codebase for string concatenation in SQL queries.
-- **Fix:** Refactored all database calls to use parameter binding (`db.prepare(...).bind(...)`).
-- **Evidence:** Verified all SQL parameters are bound safely without dynamic string interpolation.
+What was found: Overlapping booking time check needed to cover partial time overlaps for the same equipment.
+How it was fixed: Implemented interval logic newStart < bEnd && newEnd > bStart returning 409 Conflict.
+Evidence: Creating a overlapping booking returns HTTP 409 with { "error": "Booking time conflicts with an existing booking" }.
+Finding 3 (Reasoning / You Own It)
 
-### 3. Reasoning / You Own It: Overlap Exclusion on Update
-- **Finding:** During `PATCH /bookings/:id`, checking overlap without excluding the current booking ID caused self-conflict (409).
-- **Fix:** Updated the overlap query for PATCH to include `AND id != ?`.
-- **Evidence:** Updating non-time fields (e.g. borrowerName) for an existing booking now succeeds with HTTP 200.
+What was found: Error format across endpoints needed strict consistency to match the specification.
+How it was fixed: Ensured all HTTP 400, 404, and 409 error responses return uniform JSON format { "error": "..." }.
+Evidence: Verified 400, 404, and 409 responses in curl tests all return { "error": "message" }.
