@@ -1932,87 +1932,98 @@ var Hono3 = /* @__PURE__ */ __name(class extends Hono {
   }
 }, "Hono");
 
+// node_modules/hono/dist/middleware/cors/index.js
+var cors = /* @__PURE__ */ __name((options) => {
+  const opts = {
+    origin: "*",
+    allowMethods: [
+      "GET",
+      "HEAD",
+      "PUT",
+      "POST",
+      "DELETE",
+      "PATCH",
+      "QUERY"
+    ],
+    allowHeaders: [],
+    exposeHeaders: [],
+    ...options
+  };
+  const exposeHeadersStr = opts.exposeHeaders?.length ? opts.exposeHeaders.join(",") : void 0;
+  const allowHeadersStr = opts.allowHeaders?.length ? opts.allowHeaders.join(",") : void 0;
+  const findAllowOrigin = ((optsOrigin) => {
+    if (typeof optsOrigin === "string") {
+      if (optsOrigin === "*")
+        return () => optsOrigin;
+      else
+        return (origin) => optsOrigin === origin ? origin : null;
+    } else if (typeof optsOrigin === "function")
+      return optsOrigin;
+    else
+      return (origin) => optsOrigin.includes(origin) ? origin : null;
+  })(opts.origin);
+  const findAllowMethods = ((optsAllowMethods) => {
+    if (typeof optsAllowMethods === "function")
+      return async (origin, c) => (await optsAllowMethods(origin, c)).join(",");
+    else if (Array.isArray(optsAllowMethods)) {
+      const methodsStr = optsAllowMethods.join(",");
+      return () => methodsStr;
+    } else
+      return () => "";
+  })(opts.allowMethods);
+  return /* @__PURE__ */ __name(async function cors2(c, next) {
+    function set(key, value) {
+      c.res.headers.set(key, value);
+    }
+    __name(set, "set");
+    const allowOrigin = await findAllowOrigin(c.req.header("origin") || "", c);
+    if (allowOrigin)
+      set("Access-Control-Allow-Origin", allowOrigin);
+    if (opts.credentials)
+      set("Access-Control-Allow-Credentials", "true");
+    if (exposeHeadersStr)
+      set("Access-Control-Expose-Headers", exposeHeadersStr);
+    if (c.req.method === "OPTIONS") {
+      if (opts.origin !== "*")
+        c.res.headers.append("Vary", "Origin");
+      if (opts.maxAge != null)
+        set("Access-Control-Max-Age", opts.maxAge.toString());
+      const allowMethods = await findAllowMethods(c.req.header("origin") || "", c);
+      if (allowMethods)
+        set("Access-Control-Allow-Methods", allowMethods);
+      let headersStr = allowHeadersStr;
+      if (!headersStr) {
+        const requestHeaders = c.req.header("Access-Control-Request-Headers");
+        if (requestHeaders)
+          headersStr = requestHeaders.split(",").map((h) => h.trim()).join(",");
+      }
+      if (headersStr) {
+        set("Access-Control-Allow-Headers", headersStr);
+        c.res.headers.append("Vary", "Access-Control-Request-Headers");
+      }
+      c.res.headers.delete("Content-Length");
+      c.res.headers.delete("Content-Type");
+      return new Response(null, {
+        headers: c.res.headers,
+        status: 204,
+        statusText: "No Content"
+      });
+    }
+    await next();
+    if (opts.origin !== "*")
+      c.header("Vary", "Origin", { append: true });
+  }, "cors");
+}, "cors");
+
 // src/index.ts
 var app = new Hono3();
-app.get("/equipment", async (c) => {
-  const { results } = await c.env.DB.prepare("SELECT * FROM equipment").all();
-  return c.json(results);
-});
-app.get("/equipments", async (c) => {
-  const { results } = await c.env.DB.prepare("SELECT * FROM equipment").all();
-  return c.json(results);
-});
-app.get("/bookings", async (c) => {
-  const { results } = await c.env.DB.prepare("SELECT * FROM bookings").all();
-  return c.json(results);
-});
-app.get("/bookings/:id", async (c) => {
-  const id = c.req.param("id");
-  const booking = await c.env.DB.prepare("SELECT * FROM bookings WHERE id = ?").bind(id).first();
-  if (!booking)
-    return c.json({ error: "Booking not found" }, 404);
-  return c.json(booking);
-});
-app.post("/bookings", async (c) => {
-  try {
-    const { equipmentId, borrowerName, startAt, endAt, purpose } = await c.req.json();
-    if (!equipmentId || !borrowerName || !startAt || !endAt || !purpose) {
-      return c.json({ error: "Missing required fields" }, 400);
-    }
-    const start = new Date(startAt).getTime();
-    const end = new Date(endAt).getTime();
-    if (isNaN(start) || isNaN(end) || start >= end) {
-      return c.json({ error: "startAt must be earlier than endAt" }, 400);
-    }
-    const eq = await c.env.DB.prepare("SELECT id FROM equipment WHERE id = ?").bind(equipmentId).first();
-    if (!eq)
-      return c.json({ error: "Equipment not found" }, 404);
-    const overlap = await c.env.DB.prepare(
-      "SELECT id FROM bookings WHERE equipmentId = ? AND startAt < ? AND endAt > ?"
-    ).bind(equipmentId, endAt, startAt).first();
-    if (overlap)
-      return c.json({ error: "Equipment is already booked for the selected time range" }, 409);
-    const id = `bk-${Date.now()}`;
-    await c.env.DB.prepare(
-      "INSERT INTO bookings (id, equipmentId, borrowerName, startAt, endAt, purpose) VALUES (?, ?, ?, ?, ?, ?)"
-    ).bind(id, equipmentId, borrowerName, startAt, endAt, purpose).run();
-    return c.json({ id, equipmentId, borrowerName, startAt, endAt, purpose }, 201);
-  } catch (err) {
-    return c.json({ error: err.message || "Internal Server Error" }, 500);
-  }
-});
-app.patch("/bookings/:id", async (c) => {
-  const id = c.req.param("id");
-  const body = await c.req.json();
-  const current = await c.env.DB.prepare("SELECT * FROM bookings WHERE id = ?").bind(id).first();
-  if (!current)
-    return c.json({ error: "Booking not found" }, 404);
-  const equipmentId = body.equipmentId || current.equipmentId;
-  const borrowerName = body.borrowerName || current.borrowerName;
-  const startAt = body.startAt || current.startAt;
-  const endAt = body.endAt || current.endAt;
-  const purpose = body.purpose || current.purpose;
-  const start = new Date(startAt).getTime();
-  const end = new Date(endAt).getTime();
-  if (start >= end)
-    return c.json({ error: "startAt must be earlier than endAt" }, 400);
-  const overlap = await c.env.DB.prepare(
-    "SELECT id FROM bookings WHERE equipmentId = ? AND startAt < ? AND endAt > ? AND id != ?"
-  ).bind(equipmentId, endAt, startAt, id).first();
-  if (overlap)
-    return c.json({ error: "Equipment is already booked for the selected time range" }, 409);
-  await c.env.DB.prepare(
-    "UPDATE bookings SET equipmentId=?, borrowerName=?, startAt=?, endAt=?, purpose=? WHERE id=?"
-  ).bind(equipmentId, borrowerName, startAt, endAt, purpose, id).run();
-  return c.json({ id, equipmentId, borrowerName, startAt, endAt, purpose });
-});
-app.delete("/bookings/:id", async (c) => {
-  const id = c.req.param("id");
-  const current = await c.env.DB.prepare("SELECT * FROM bookings WHERE id = ?").bind(id).first();
-  if (!current)
-    return c.json({ error: "Booking not found" }, 404);
-  await c.env.DB.prepare("DELETE FROM bookings WHERE id = ?").bind(id).run();
-  return c.body(null, 204);
+app.use("*", cors());
+app.get("/", (c) => {
+  return c.json({
+    status: "ok",
+    message: "Midterm API is running successfully!",
+    timestamp: (/* @__PURE__ */ new Date()).toISOString()
+  });
 });
 var src_default = app;
 
